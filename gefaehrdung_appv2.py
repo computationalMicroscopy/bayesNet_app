@@ -219,9 +219,3 @@ if st.button('Vorhersage starten'):
 
         else:
             st.warning('Es wurden keine Stichproben generiert.')
-
-#pip install --extra-index-url https://pypi.nvidia.com/ cuml-cu12
-
-#pip freeze > requirements.txt
-
-#pip install --upgrade pip
