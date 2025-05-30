@@ -203,24 +203,47 @@ if st.button('Vorhersage starten'):
 
             # Berechne die bedingten Wahrscheinlichkeiten für hohes Gefahrenpotenzial
             conditional_probs = {}
+            node_name_map = {
+                'familiaeres_uUmfeld': 'Familiäres Umfeld',
+                'psychische_gesundheit': 'Psychische Gesundheit',
+                'schulische_unterstuetzung': 'Schulische Unterstützung',
+                'aggressives_verhalten': 'Aggressives Verhalten',
+                'soziale_isolation': 'Soziale Isolation',
+                'leistungsabfall': 'Leistungsabfall',
+                'warnsignale_im_gespraech': 'Warnsignale im Gespräch',
+                'vorherige_vorfaelle': 'Vorherige Vorfälle'
+            }
+            value_name_map = {
+                'stabil': 'stabil', 'instabil': 'instabil',
+                'unauffällig': 'unauffällig', 'auffällig': 'auffällig',
+                'vorhanden': 'vorhanden', 'mangelhaft': 'mangelhaft',
+                'aggressivja': 'ja', 'aggressivnein': 'nein',
+                'sozialisoliertja': 'ja', 'sozialisoliertnein': 'nein',
+                'leistungsabfallja': 'ja', 'leistungsabfallnein': 'nein',
+                'warnsignaleja': 'ja', 'warnsignalenein': 'nein',
+                'vorherigefaelleja': 'ja', 'vorherigefaellenein': 'nein'
+            }
+
             for node in ['familiaeres_uUmfeld', 'psychische_gesundheit', 'schulische_unterstuetzung',
                          'aggressives_verhalten', 'soziale_isolation', 'leistungsabfall',
                          'warnsignale_im_gespraech', 'vorherige_vorfaelle']:
-                unique_values = sorted(list(set(s[node] for s in sampled_data if node in s)))
-                for value in unique_values:
-                    prob = calculate_conditional_probability(sampled_data, node, value)
-                    conditional_probs[f"P(hoch | {node}={value})"] = prob
+                unique_internal_values = sorted(list(set(s[node] for s in sampled_data if node in s)))
+                for internal_value in unique_internal_values:
+                    prob = calculate_conditional_probability(sampled_data, node, internal_value)
+                    display_node_name = node_name_map.get(node, node.replace('_', ' ').capitalize())
+                    display_value_name = value_name_map.get(internal_value, internal_value.replace('_', ' ').capitalize())
+                    conditional_probs[f"Hohes Gefahrenpotenzial | {display_node_name} ist {display_value_name}"] = prob
 
-            conditional_df = pd.DataFrame(list(conditional_probs.items()), columns=['Bedingung', 'Wahrscheinlichkeit für hohes Gefahrenpotenzial'])
-            conditional_df_sorted = conditional_df.sort_values(by='Wahrscheinlichkeit für hohes Gefahrenpotenzial', ascending=False).reset_index(drop=True)
+            conditional_df = pd.DataFrame(list(conditional_probs.items()), columns=['Bedingung', 'Wahrscheinlichkeit'])
+            conditional_df_sorted = conditional_df.sort_values(by='Wahrscheinlichkeit', ascending=False).reset_index(drop=True)
 
-            st.subheader('Bedingte Wahrscheinlichkeit für hohes Gefahrenpotenzial (Hervorgehoben):')
+            st.subheader('Wahrscheinlichkeit für hohes Gefahrenpotenzial unter bestimmten Bedingungen (Hervorgehoben):')
 
             def highlight_max(s):
                 is_max = s == s.max()
                 return ['background-color: yellow' if v else '' for v in is_max]
 
-            st.dataframe(conditional_df_sorted.style.apply(highlight_max, subset=['Wahrscheinlichkeit für hohes Gefahrenpotenzial']).format({'Wahrscheinlichkeit für hohes Gefahrenpotenzial': '{:.2f}'}))
+            st.dataframe(conditional_df_sorted.style.apply(highlight_max, subset=['Wahrscheinlichkeit']).format({'Wahrscheinlichkeit': '{:.2f}'}))
 
             st.subheader('Psychologisches Profil:')
             profile_data_named = {}
@@ -253,7 +276,7 @@ if st.button('Vorhersage starten'):
                 'Leistungsabfall': calculate_node_probabilities_named(sampled_data, 'leistungsabfall', {'leistungsabfallja': 'Ja', 'leistungsabfallnein': 'Nein'}),
                 'Warnsignale im Gespräch': calculate_node_probabilities_named(sampled_data, 'warnsignale_im_gespraech', {'warnsignaleja': 'Ja', 'warnsignalenein': 'Nein'}),
                 'Vorherige Vorfälle': calculate_node_probabilities_named(sampled_data, 'vorherige_vorfaelle', {'vorherigefaelleja': 'Ja', 'vorherigefaellenein': 'Nein'}),
-                'Gefahrenpotenzial': {'Niedrig': probabilities['Niedrig'], 'Mittel': probabilities['Mittel'], 'Hoch': probabilities['Hoch']} # Hier korrigiert
+                'Gefahrenpotenzial': {'Niedrig': probabilities['Niedrig'], 'Mittel': probabilities['Mittel'], 'Hoch': probabilities['Hoch']}
             }
 
             profile_df_long = pd.DataFrame([(key, sub_key, value) for key, sub_dict in profile_data_named.items() for sub_key, value in sub_dict.items()],
