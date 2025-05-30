@@ -177,7 +177,7 @@ if st.button('Vorhersage starten'):
         sampled_data = forward_sampling(num_samples)
 
         # Berechne die Wahrscheinlichkeiten des Gefahrenpotenzials
-        gefahr_counts = {'niedrig': 0, 'mittel': 0, 'hoch': 0}
+        gefahr_counts = {'gefahrniedrig': 0, 'gefahrmittel': 0, 'gefahrhoch': 0}
         for s in sampled_data:
             if 'gefahrenpotential' in s:
                 gefahr_counts[s['gefahrenpotential']] += 1
@@ -185,9 +185,9 @@ if st.button('Vorhersage starten'):
         total_samples = len(sampled_data)
         if total_samples > 0:
             probabilities = {
-                'Niedrig': gefahr_counts['niedrig'] / total_samples,
-                'Mittel': gefahr_counts['mittel'] / total_samples,
-                'Hoch': gefahr_counts['hoch'] / total_samples
+                'Niedrig': gefahr_counts['gefahrniedrig'] / total_samples,
+                'Mittel': gefahr_counts['gefahrmittel'] / total_samples,
+                'Hoch': gefahr_counts['gefahrhoch'] / total_samples
             }
 
             st.subheader('Wahrscheinlichkeiten des Gefahrenpotenzials:')
@@ -253,7 +253,7 @@ if st.button('Vorhersage starten'):
                 'Leistungsabfall': calculate_node_probabilities_named(sampled_data, 'leistungsabfall', {'leistungsabfallja': 'Ja', 'leistungsabfallnein': 'Nein'}),
                 'Warnsignale im Gespräch': calculate_node_probabilities_named(sampled_data, 'warnsignale_im_gespraech', {'warnsignaleja': 'Ja', 'warnsignalenein': 'Nein'}),
                 'Vorherige Vorfälle': calculate_node_probabilities_named(sampled_data, 'vorherige_vorfaelle', {'vorherigefaelleja': 'Ja', 'vorherigefaellenein': 'Nein'}),
-                'Gefahrenpotenzial': probabilities
+                'Gefahrenpotenzial': {'Niedrig': probabilities['Niedrig'], 'Mittel': probabilities['Mittel'], 'Hoch': probabilities['Hoch']} # Hier korrigiert
             }
 
             profile_df_long = pd.DataFrame([(key, sub_key, value) for key, sub_dict in profile_data_named.items() for sub_key, value in sub_dict.items()],
