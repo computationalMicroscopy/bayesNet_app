@@ -146,7 +146,7 @@ def forward_sampling(noSamples):
 
     return samplelist
 
-def calculate_conditional_probability(samples, condition_node, condition_value):
+    def calculate_conditional_probability(samples, condition_node, condition_value):
     conditioned_samples = [s for s in samples if s[condition_node] == condition_value]
     if not conditioned_samples:
         return 0.0
@@ -214,8 +214,41 @@ if st.button('Vorhersage starten'):
                     conditional_probs[f"P(hoch | {node}={value})"] = prob
 
             conditional_df = pd.DataFrame(list(conditional_probs.items()), columns=['Bedingung', 'P(hoch)'])
-            st.subheader('Bedingte Wahrscheinlichkeit für hohes Gefahrenpotenzial:')
-            st.dataframe(conditional_df.sort_values(by='P(hoch)', ascending=False).style.format({'P(hoch)': '{:.2f}'}))
+            conditional_df_sorted = conditional_df.sort_values(by='P(hoch)', ascending=False).reset_index(drop=True)
+
+            st.subheader('Bedingte Wahrscheinlichkeit für hohes Gefahrenpotenzial (Hervorgehoben):')
+
+            # Funktion zum Hervorheben der höchsten Wahrscheinlichkeiten
+            def highlight_max(s):
+                is_max = s == s.max()
+                return ['background-color: yellow' if v else '' for v in is_max]
+
+            st.dataframe(conditional_df_sorted.style.apply(highlight_max, subset=['P(hoch)']).format({'P(hoch)': '{:.2f}'}))
+
+            st.subheader('Wahrscheinlichkeiten für das psychologische Profil:')
+            profile_data = {}
+
+            def calculate_node_probabilities(samples, node_name, possible_values):
+                counts = {value: 0 for value in possible_values}
+                for sample in samples:
+                    if node_name in sample:
+                        counts[sample[node_name]] += 1
+                total = len(samples)
+                return {value: count / total if total > 0 else 0 for value, count in counts.items()}
+
+            profile_data['Familiäres Umfeld'] = calculate_node_probabilities(sampled_data, 'familiaeres_uUmfeld', ['stabil', 'instabil'])
+            profile_data['Psychische Gesundheit'] = calculate_node_probabilities(sampled_data, 'psychische_gesundheit', ['unauffällig', 'auffällig'])
+            profile_data['Schulische Unterstützung'] = calculate_node_probabilities(sampled_data, 'schulische_unterstuetzung', ['vorhanden', 'mangelhaft'])
+            profile_data['Aggressives Verhalten'] = calculate_node_probabilities(sampled_data, 'aggressives_verhalten', ['aggressivja', 'aggressivnein'])
+            profile_data['Soziale Isolation'] = calculate_node_probabilities(sampled_data, 'soziale_isolation', ['sozialisoliertja', 'sozialisoliertnein'])
+            profile_data['Leistungsabfall'] = calculate_node_probabilities(sampled_data, 'leistungsabfall', ['leistungsabfallja', 'leistungsabfallnein'])
+            profile_data['Warnsignale im Gespräch'] = calculate_node_probabilities(sampled_data, 'warnsignale_im_gespraech', ['warnsignaleja', 'warnsignalenein'])
+            profile_data['Vorherige Vorfälle'] = calculate_node_probabilities(sampled_data, 'vorherige_vorfaelle', ['vorherigefaelleja', 'vorherigefaellenein'])
+            profile_data['Gefahrenpotenzial'] = probabilities # Die Wahrscheinlichkeiten des Gefahrenpotenzials haben wir bereits
+
+            # Umwandlung in einen DataFrame für eine ansprechende Darstellung
+            profile_df = pd.DataFrame.from_dict(profile_data, orient='index')
+            st.dataframe(profile_df.style.format('{:.2f}'))
 
         else:
             st.warning('Es wurden keine Stichproben generiert.')
