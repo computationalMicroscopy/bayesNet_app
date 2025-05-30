@@ -185,9 +185,9 @@ if st.button('Vorhersage starten'):
         total_samples = len(sampled_data)
         if total_samples > 0:
             probabilities = {
-                'niedrig': gefahr_counts['gefahrniedrig'] / total_samples,
-                'mittel': gefahr_counts['gefahrmittel'] / total_samples,
-                'hoch': gefahr_counts['gefahrhoch'] / total_samples
+                'Niedrig': gefahr_counts['gefahrniedrig'] / total_samples,
+                'Mittel': gefahr_counts['gefahrmittel'] / total_samples,
+                'Hoch': gefahr_counts['gefahrhoch'] / total_samples
             }
 
             st.subheader('Wahrscheinlichkeiten des Gefahrenpotenzials:')
@@ -216,7 +216,6 @@ if st.button('Vorhersage starten'):
 
             st.subheader('Bedingte Wahrscheinlichkeit für hohes Gefahrenpotenzial (Hervorgehoben):')
 
-            # Funktion zum Hervorheben der höchsten Wahrscheinlichkeiten
             def highlight_max(s):
                 is_max = s == s.max()
                 return ['background-color: yellow' if v else '' for v in is_max]
@@ -238,31 +237,37 @@ if st.button('Vorhersage starten'):
                 total = len(samples)
                 return {display_name: count / total if total > 0 else 0 for display_name, count in counts.items()}
 
-            profile_data['Familiäres Umfeld'] = calculate_node_probabilities_named(sampled_data, 'familiaeres_uUmfeld', {'stabil': 'Stabiles Umfeld', 'instabil': 'Instabiles Umfeld'})
-            profile_data['Psychische Gesundheit'] = calculate_node_probabilities_named(sampled_data, 'psychische_gesundheit', {'unauffällig': 'Unauffällig', 'auffällig': 'Auffällig'})
-            profile_data['Schulische Unterstützung'] = calculate_node_probabilities_named(sampled_data, 'schulische_unterstuetzung', {'vorhanden': 'Vorhanden', 'mangelhaft': 'Mangelhaft'})
-            profile_data['Aggressives Verhalten'] = calculate_node_probabilities_named(sampled_data, 'aggressives_verhalten', {'aggressivja': 'Ja', 'aggressivnein': 'Nein'})
-            profile_data['Soziale Isolation'] = calculate_node_probabilities_named(sampled_data, 'soziale_isolation', {'sozialisoliertja': 'Ja', 'sozialisoliertnein': 'Nein'})
-            profile_data['Leistungsabfall'] = calculate_node_probabilities_named(sampled_data, 'leistungsabfall', {'leistungsabfallja': 'Ja', 'leistungsabfallnein': 'Nein'})
-            profile_data['Warnsignale im Gespräch'] = calculate_node_probabilities_named(sampled_data, 'warnsignale_im_gespraech', {'warnsignaleja': 'Ja', 'warnsignalenein': 'Nein'})
-            profile_data['Vorherige Vorfälle'] = calculate_node_probabilities_named(sampled_data, 'vorherige_vorfaelle', {'vorherigefaelleja': 'Ja', 'vorherigefaellenein': 'Nein'})
-            profile_data['Gefahrenpotenzial'] = {'Niedrig': probabilities['niedrig'], 'Mittel': probabilities['mittel'], 'Hoch': probabilities['hoch']}
+            profile_data_named = {
+                'Familiäres Umfeld': calculate_node_probabilities_named(sampled_data, 'familiaeres_uUmfeld', {'stabil': 'Stabiles Umfeld', 'instabil': 'Instabiles Umfeld'}),
+                'Psychische Gesundheit': calculate_node_probabilities_named(sampled_data, 'psychische_gesundheit', {'unauffällig': 'Unauffällig', 'auffällig': 'Auffällig'}),
+                'Schulische Unterstützung': calculate_node_probabilities_named(sampled_data, 'schulische_unterstuetzung', {'vorhanden': 'Vorhanden', 'mangelhaft': 'Mangelhaft'}),
+                'Aggressives Verhalten': calculate_node_probabilities_named(sampled_data, 'aggressives_verhalten', {'aggressivja': 'Ja', 'aggressivnein': 'Nein'}),
+                'Soziale Isolation': calculate_node_probabilities_named(sampled_data, 'soziale_isolation', {'sozialisoliertja': 'Ja', 'sozialisoliertnein': 'Nein'}),
+                'Leistungsabfall': calculate_node_probabilities_named(sampled_data, 'leistungsabfall', {'leistungsabfallja': 'Ja', 'leistungsabfallnein': 'Nein'}),
+                'Warnsignale im Gespräch': calculate_node_probabilities_named(sampled_data, 'warnsignale_im_gespraech', {'warnsignaleja': 'Ja', 'warnsignalenein': 'Nein'}),
+                'Vorherige Vorfälle': calculate_node_probabilities_named(sampled_data, 'vorherige_vorfaelle', {'vorherigefaelleja': 'Ja', 'vorherigefaellenein': 'Nein'}),
+                'Gefahrenpotenzial': probabilities
+            }
 
-            st.subheader('Psychologisches Profil (Visualisierung):')
-            profile_df = pd.DataFrame.from_dict(profile_data, orient='index')
-            for index, row in profile_df.iterrows():
-                st.markdown(f"**{index}**")
-                chart_data = pd.DataFrame({'Zustand': row.index, 'Wahrscheinlichkeit': row.values})
-                chart = alt.Chart(chart_data).mark_bar().encode(
-                    x=alt.X('Wahrscheinlichkeit:Q', axis=alt.Axis(format='%')),
-                    y=alt.Y('Zustand:N', sort='-x', title='Zustand'),
-                    color=alt.Color('Wahrscheinlichkeit:Q', scale=alt.Scale(range=['lightblue', 'darkblue'])),
-                    tooltip=['Zustand', alt.Tooltip('Wahrscheinlichkeit', format='.2%')]
-                ).properties(
-                    title=index
-                )
-                st.altair_chart(chart, use_container_width=True)
+            profile_df_long = pd.DataFrame([(key, sub_key, value) for key, sub_dict in profile_data_named.items() for sub_key, value in sub_dict.items()],
+                                          columns=['Faktor', 'Zustand', 'Wahrscheinlichkeit'])
+
+            color_scale = alt.Scale(domain=profile_df_long['Faktor'].unique().tolist(), range='category10')
+
+            profile_chart = alt.Chart(profile_df_long).mark_bar().encode(
+                x=alt.X('Wahrscheinlichkeit:Q', axis=alt.Axis(format='%')),
+                y=alt.Y('Zustand:N', sort='-x', title='Zustand'),
+                color=alt.Color('Faktor:N', scale=color_scale),
+                row=alt.Row('Faktor:N', header=alt.Header(titleOrient="bottom", labelOrient="bottom")),
+                tooltip=['Faktor', 'Zustand', alt.Tooltip('Wahrscheinlichkeit', format='.2%')]
+            ).properties(
+                title='Psychologisches Profil'
+            ).resolve_scale(
+                y='independent'
+            )
+
+            st.altair_chart(profile_chart, use_container_width=True)
 
         else:
             st.warning('Es wurden keine Stichproben generiert.')
-            profile_data = {}
+            profile_data_named = {}
