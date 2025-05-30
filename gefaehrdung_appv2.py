@@ -177,7 +177,7 @@ if st.button('Vorhersage starten'):
         sampled_data = forward_sampling(num_samples)
 
         # Berechne die Wahrscheinlichkeiten des Gefahrenpotenzials
-        gefahr_counts = {'gefahrniedrig': 0, 'gefahrmittel': 0, 'gefahrhoch': 0}
+        gefahr_counts = {'niedrig': 0, 'mittel': 0, 'hoch': 0}
         for s in sampled_data:
             if 'gefahrenpotential' in s:
                 gefahr_counts[s['gefahrenpotential']] += 1
@@ -185,9 +185,9 @@ if st.button('Vorhersage starten'):
         total_samples = len(sampled_data)
         if total_samples > 0:
             probabilities = {
-                'Niedrig': gefahr_counts['gefahrniedrig'] / total_samples,
-                'Mittel': gefahr_counts['gefahrmittel'] / total_samples,
-                'Hoch': gefahr_counts['gefahrhoch'] / total_samples
+                'Niedrig': gefahr_counts['niedrig'] / total_samples,
+                'Mittel': gefahr_counts['mittel'] / total_samples,
+                'Hoch': gefahr_counts['hoch'] / total_samples
             }
 
             st.subheader('Wahrscheinlichkeiten des Gefahrenpotenzials:')
@@ -223,7 +223,7 @@ if st.button('Vorhersage starten'):
             st.dataframe(conditional_df_sorted.style.apply(highlight_max, subset=['Wahrscheinlichkeit für hohes Gefahrenpotenzial']).format({'Wahrscheinlichkeit für hohes Gefahrenpotenzial': '{:.2f}'}))
 
             st.subheader('Psychologisches Profil:')
-            profile_data = {}
+            profile_data_named = {}
 
             def calculate_node_probabilities_named(samples, node_name, value_map_reverse):
                 counts = {display_name: 0 for display_name in value_map_reverse.values()}
@@ -236,6 +236,13 @@ if st.button('Vorhersage starten'):
                                 break
                 total = len(samples)
                 return {display_name: count / total if total > 0 else 0 for display_name, count in counts.items()}
+
+            color_domain = ['Familiäres Umfeld', 'Psychische Gesundheit', 'Schulische Unterstützung',
+                            'Aggressives Verhalten', 'Soziale Isolation', 'Leistungsabfall',
+                            'Warnsignale im Gespräch', 'Vorherige Vorfälle', 'Gefahrenpotenzial']
+            color_range = ['#1f77b4', '#ff7f0e', '#2ca02c', '#d62728', '#9467bd',
+                           '#8c564b', '#e377c2', '#7f7f7f', '#bcbd22']
+            color_scale = alt.Scale(domain=color_domain, range=color_range)
 
             profile_data_named = {
                 'Familiäres Umfeld': calculate_node_probabilities_named(sampled_data, 'familiaeres_uUmfeld', {'stabil': 'Stabiles Umfeld', 'instabil': 'Instabiles Umfeld'}),
@@ -252,13 +259,11 @@ if st.button('Vorhersage starten'):
             profile_df_long = pd.DataFrame([(key, sub_key, value) for key, sub_dict in profile_data_named.items() for sub_key, value in sub_dict.items()],
                                           columns=['Faktor', 'Zustand', 'Wahrscheinlichkeit'])
 
-            color_scale = alt.Scale(domain=profile_df_long['Faktor'].unique().tolist(), range='category10')
-
             profile_chart = alt.Chart(profile_df_long).mark_bar().encode(
                 x=alt.X('Wahrscheinlichkeit:Q', axis=alt.Axis(format='%')),
                 y=alt.Y('Zustand:N', sort='-x', title='Zustand'),
                 color=alt.Color('Faktor:N', scale=color_scale),
-                row=alt.Row('Faktor:N', header=alt.Header(titleOrient="bottom", labelOrient="bottom")),
+                facet=alt.Facet('Faktor:N', header=alt.Header(titleOrient="bottom", labelOrient="bottom")),
                 tooltip=['Faktor', 'Zustand', alt.Tooltip('Wahrscheinlichkeit', format='.2%')]
             ).properties(
                 title='Psychologisches Profil'
