@@ -226,13 +226,14 @@ if st.button('Vorhersage starten'):
             st.subheader('Psychologisches Profil:')
             profile_data = {}
 
-            def calculate_node_probabilities_named(samples, node_name, value_map):
-                counts = {value: 0 for value in value_map.keys()}
+            def calculate_node_probabilities_named(samples, node_name, value_map_reverse):
+                counts = {display_name: 0 for display_name in value_map_reverse.values()}
                 for sample in samples:
                     if node_name in sample:
-                        for internal_value, display_name in value_map.items():
-                            if sample[node_name] == internal_value:
-                                counts[display_name] += 1
+                        internal_value = sample[node_name]
+                        for internal, display in value_map_reverse.items():
+                            if internal_value == internal:
+                                counts[display] += 1
                                 break
                 total = len(samples)
                 return {display_name: count / total if total > 0 else 0 for display_name, count in counts.items()}
@@ -254,7 +255,7 @@ if st.button('Vorhersage starten'):
                 chart_data = pd.DataFrame({'Zustand': row.index, 'Wahrscheinlichkeit': row.values})
                 chart = alt.Chart(chart_data).mark_bar().encode(
                     x=alt.X('Wahrscheinlichkeit:Q', axis=alt.Axis(format='%')),
-                    y=alt.Y('Zustand:N', sort='-x'),
+                    y=alt.Y('Zustand:N', sort='-x', title='Zustand'),
                     color=alt.Color('Wahrscheinlichkeit:Q', scale=alt.Scale(range=['lightblue', 'darkblue'])),
                     tooltip=['Zustand', alt.Tooltip('Wahrscheinlichkeit', format='.2%')]
                 ).properties(
