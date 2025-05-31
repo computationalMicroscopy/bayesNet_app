@@ -283,7 +283,6 @@ if st.button('Vorhersage starten'):
                                           columns=['Faktor', 'Zustand', 'Wahrscheinlichkeit'])
 
             # Kreisdiagramme in flexibler horizontaler Anordnung
-            # Kreisdiagramme in flexibler horizontaler Anordnung
             factor_charts = []
             for factor in profile_df_long['Faktor'].unique():
                 factor_data = profile_df_long[profile_df_long['Faktor'] == factor]
@@ -321,3 +320,7 @@ if st.button('Vorhersage starten'):
             )
 
             st.altair_chart(combined_chart, use_container_width=True)
+
+        else:
+            st.warning('Es wurden keine Stichproben generiert.')
+            profile_data_named = {}
