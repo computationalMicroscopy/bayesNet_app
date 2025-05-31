@@ -289,7 +289,7 @@ if st.button('Vorhersage starten'):
                 color=alt.Color('Zustand:N', title='Zustand'),
                 tooltip=['Faktor', 'Zustand', alt.Tooltip('Wahrscheinlichkeit', format='.2%')]
             ).properties(
-                title='Psychologisches Profil'
+                title=''
             ).resolve_scale(
                 x='independent' # Jeder Balken geht von 0 bis 1
             )
