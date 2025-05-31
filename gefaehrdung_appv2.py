@@ -248,7 +248,7 @@ if st.button('Vorhersage starten'):
             st.subheader('Psychologisches Profil:')
             profile_data_named = {}
 
-            def calculate_conditional_probability(samples, condition_node, condition_value):
+def calculate_conditional_probability(samples, condition_node, condition_value):
     conditioned_samples = [s for s in samples if s[condition_node] == condition_value]
     if not conditioned_samples:
         return 0.0
