@@ -248,6 +248,108 @@ if st.button('Vorhersage starten'):
             st.subheader('Psychologisches Profil:')
             profile_data_named = {}
 
+            def calculate_conditional_probability(samples, condition_node, condition_value):
+    conditioned_samples = [s for s in samples if s[condition_node] == condition_value]
+    if not conditioned_samples:
+        return 0.0
+    high_risk_conditioned = [s for s in conditioned_samples if s['gefahrenpotential'] == 'gefahrhoch']
+    return len(high_risk_conditioned) / len(conditioned_samples)
+
+st.title('Netzwerk zur Gefährdervorhersage')
+
+# Eingabefelder für die A-priori-Wahrscheinlichkeiten
+st.sidebar.header('Beobachtungsparameter für die Person')
+
+p_familiaeres_stabil = st.sidebar.slider('Wahrscheinlichkeit für ein stabiles familiäres Umfeld:', 0.0, 1.0, 0.7)
+p_psychische_unauffaellig = st.sidebar.slider('Wahrscheinlichkeit für unauffällige psychische Gesundheit:', 0.0, 1.0, 0.96)
+p_schulische_unterstuetzung_vorhanden = st.sidebar.slider('Wahrscheinlichkeit für vorhandene schulische Unterstützung oder Inanspruchnahme:', 0.0, 1.0, 0.55)
+
+# Aktualisiere die A-priori-Knoten basierend auf den Eingaben
+familiaeres_uUmfeld['stabil'] = p_familiaeres_stabil
+familiaeres_uUmfeld['instabil'] = 1.0 - p_familiaeres_stabil
+psychische_gesundheit['unauffällig'] = p_psychische_unauffaellig
+psychische_gesundheit['auffällig'] = 1.0 - p_psychische_unauffaellig
+schulische_unterstuetzung['vorhanden'] = p_schulische_unterstuetzung_vorhanden
+schulische_unterstuetzung['mangelhaft'] = 1.0 - p_schulische_unterstuetzung_vorhanden
+
+num_samples = st.slider('Anzahl der Stichproben:', min_value=100, max_value=100000, value=1000, step=50)
+
+if st.button('Vorhersage starten'):
+    with st.spinner(f'Führe {num_samples} Simulationen durch...'):
+        sampled_data = forward_sampling(num_samples)
+
+        # Berechne die Wahrscheinlichkeiten des Gefahrenpotenzials
+        gefahr_counts = {'gefahrniedrig': 0, 'gefahrmittel': 0, 'gefahrhoch': 0}
+        for s in sampled_data:
+            if 'gefahrenpotential' in s:
+                gefahr_counts[s['gefahrenpotential']] += 1
+
+        total_samples = len(sampled_data)
+        if total_samples > 0:
+            probabilities = {
+                'Niedrig': gefahr_counts['gefahrniedrig'] / total_samples,
+                'Mittel': gefahr_counts['gefahrmittel'] / total_samples,
+                'Hoch': gefahr_counts['gefahrhoch'] / total_samples
+            }
+
+            st.subheader('Wahrscheinlichkeiten des Gefahrenpotenzials:')
+            prob_df = pd.DataFrame(list(probabilities.items()), columns=['Gefahrenpotenzial', 'Wahrscheinlichkeit'])
+            chart_gefahr = alt.Chart(prob_df).mark_bar().encode(
+                x=alt.X('Wahrscheinlichkeit:Q', axis=alt.Axis(format='%')),
+                y=alt.Y('Gefahrenpotenzial:N', sort='-x', title='Gefahrenpotenzial'),
+                tooltip=['Gefahrenpotenzial', alt.Tooltip('Wahrscheinlichkeit', format='.2%')]
+            ).properties(
+                title='Verteilung des Gefahrenpotenzials'
+            )
+            st.altair_chart(chart_gefahr, use_container_width=True)
+
+            # Berechne die bedingten Wahrscheinlichkeiten für hohes Gefahrenpotenzial
+            conditional_probs = {}
+            node_name_map = {
+                'familiaeres_uUmfeld': 'Familiäres Umfeld',
+                'psychische_gesundheit': 'Psychische Gesundheit',
+                'schulische_unterstuetzung': 'Schulische Unterstützung',
+                'aggressives_verhalten': 'Aggressives Verhalten',
+                'soziale_isolation': 'Soziale Isolation',
+                'leistungsabfall': 'Leistungsabfall',
+                'warnsignale_im_gespraech': 'Warnsignale im Gespräch',
+                'vorherige_vorfaelle': 'Vorherige Vorfälle'
+            }
+            value_name_map = {
+                'stabil': 'stabil', 'instabil': 'instabil',
+                'unauffällig': 'unauffällig', 'auffällig': 'auffällig',
+                'vorhanden': 'vorhanden', 'mangelhaft': 'mangelhaft',
+                'aggressivja': 'ja', 'aggressivnein': 'nein',
+                'sozialisoliertja': 'ja', 'sozialisoliertnein': 'nein',
+                'leistungsabfallja': 'ja', 'leistungsabfallnein': 'nein',
+                'warnsignaleja': 'ja', 'warnsignalenein': 'nein',
+                'vorherigefaelleja': 'ja', 'vorherigefaellenein': 'nein'
+            }
+
+            for node in ['familiaeres_uUmfeld', 'psychische_gesundheit', 'schulische_unterstuetzung',
+                         'aggressives_verhalten', 'soziale_isolation', 'leistungsabfall',
+                         'warnsignale_im_gespraech', 'vorherige_vorfaelle']:
+                unique_internal_values = sorted(list(set(s[node] for s in sampled_data if node in s)))
+                for internal_value in unique_internal_values:
+                    prob = calculate_conditional_probability(sampled_data, node, internal_value)
+                    display_node_name = node_name_map.get(node, node.replace('_', ' ').capitalize())
+                    display_value_name = value_name_map.get(internal_value, internal_value.replace('_', ' ').capitalize())
+                    conditional_probs[f"Hohes Gefahrenpotenzial | {display_node_name} ist {display_value_name}"] = prob
+
+            conditional_df = pd.DataFrame(list(conditional_probs.items()), columns=['Bedingung', 'Wahrscheinlichkeit'])
+            conditional_df_sorted = conditional_df.sort_values(by='Wahrscheinlichkeit', ascending=False).reset_index(drop=True).head(5)
+
+            st.subheader('Top 5: Bedingungen mit der höchsten Wahrscheinlichkeit für hohes Gefahrenpotenzial:')
+
+            def highlight_max(s):
+                is_max = s == s.max()
+                return ['background-color: yellow' if v else '' for v in is_max]
+
+            st.dataframe(conditional_df_sorted.style.apply(highlight_max, subset=['Wahrscheinlichkeit']).format({'Wahrscheinlichkeit': '{:.2f}'}))
+
+            st.subheader('Psychologisches Profil:')
+            profile_data_named = {}
+
             def calculate_node_probabilities_named(samples, node_name, value_map_reverse):
                 counts = {display_name: 0 for display_name in value_map_reverse.values()}
                 for sample in samples:
@@ -282,19 +384,41 @@ if st.button('Vorhersage starten'):
             profile_df_long = pd.DataFrame([(key, sub_key, value) for key, sub_dict in profile_data_named.items() for sub_key, value in sub_dict.items()],
                                           columns=['Faktor', 'Zustand', 'Wahrscheinlichkeit'])
 
-            # Psychologisches Profil: Gestapelte horizontale Balken pro Faktor
-            profile_chart = alt.Chart(profile_df_long).mark_bar().encode(
-                x=alt.X('Wahrscheinlichkeit:Q', axis=alt.Axis(format='%')),
-                y=alt.Y('Faktor:N', title=None, sort=None),
-                color=alt.Color('Zustand:N', title='Zustand'),
+            # Psychologisches Profil: Farbcodierte Tabelle
+            factors = profile_df_long['Faktor'].unique()
+            states = profile_df_long['Zustand'].unique()
+
+            heatmap_data = []
+            for factor in factors:
+                factor_data = profile_df_long[profile_df_long['Faktor'] == factor]
+                row = {'Faktor': factor}
+                for state in states:
+                    prob = factor_data[factor_data['Zustand'] == state]['Wahrscheinlichkeit'].values
+                    row[state] = prob[0] if len(prob) > 0 else 0
+                heatmap_data.append(row)
+
+            heatmap_df = pd.DataFrame(heatmap_data).set_index('Faktor')
+            heatmap_df_melted = heatmap_df.melt(var_name='Zustand', value_name='Wahrscheinlichkeit', ignore_index=False).reset_index()
+
+            color_scale_heatmap = alt.Scale(range='heatmap') # Verwenden einer Standard-Heatmap-Farbskala
+
+            heatmap_chart = alt.Chart(heatmap_df_melted).mark_rect().encode(
+                x=alt.X('Zustand:N', title='Zustand'),
+                y=alt.Y('Faktor:N', title='Faktor'),
+                color=alt.Color('Wahrscheinlichkeit:Q', scale=color_scale_heatmap),
                 tooltip=['Faktor', 'Zustand', alt.Tooltip('Wahrscheinlichkeit', format='.2%')]
             ).properties(
-                title=''
-            ).resolve_scale(
-                x='independent' # Jeder Balken geht von 0 bis 1
+                title='Psychologisches Profil'
             )
 
-            st.altair_chart(profile_chart, use_container_width=True)
+            text_chart = heatmap_chart.mark_text().encode(
+                text=alt.Text('Wahrscheinlichkeit:Q', format='.1%'),
+                color=alt.value('black') # Schriftfarbe für die Werte
+            )
+
+            final_chart = heatmap_chart + text_chart
+
+            st.altair_chart(final_chart, use_container_width=True)
 
         else:
             st.warning('Es wurden keine Stichproben generiert.')
