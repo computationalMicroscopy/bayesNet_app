@@ -282,14 +282,14 @@ if st.button('Vorhersage starten'):
             profile_df_long = pd.DataFrame([(key, sub_key, value) for key, sub_dict in profile_data_named.items() for sub_key, value in sub_dict.items()],
                                           columns=['Faktor', 'Zustand', 'Wahrscheinlichkeit'])
 
-            # Kreisdiagramme untereinander mit Beschreibungen darüber
+            # Kreisdiagramme in flexibler horizontaler Anordnung
             factor_charts = []
             for factor in profile_df_long['Faktor'].unique():
                 factor_data = profile_df_long[profile_df_long['Faktor'] == factor]
 
                 base = alt.Chart(factor_data).encode(
                     theta=alt.Theta("Wahrscheinlichkeit:Q", stack=True),
-                    color=alt.Color("Zustand:N", legend=None) # Legende innerhalb der einzelnen Charts ist redundant
+                    color=alt.Color("Zustand:N", legend=None)
                 )
 
                 pie = base.mark_arc(outerRadius=60).encode(
@@ -308,11 +308,12 @@ if st.button('Vorhersage starten'):
                 )
                 factor_charts.append(factor_chart)
 
-            # Kombiniere die Charts vertikal
-            combined_chart = alt.vconcat(*factor_charts).properties(
+            # Anordnung in Zeilen mit 3 oder 4 Diagrammen
+            rows = [factor_charts[i:i + 4] for i in range(0, len(factor_charts), 4)]
+            combined_chart = alt.vconcat(*[alt.hconcat(*row) for row in rows]).properties(
                 title='Psychologisches Profil'
             ).resolve_scale(
-                theta='shared' # Stelle sicher, dass die Winkel konsistent sind
+                theta='shared'
             )
 
             st.altair_chart(combined_chart, use_container_width=True)
