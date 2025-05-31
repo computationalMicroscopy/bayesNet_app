@@ -146,7 +146,7 @@ def forward_sampling(noSamples):
 
     return samplelist
 
- def calculate_conditional_probability(samples, condition_node, condition_value):
+  def calculate_conditional_probability(samples, condition_node, condition_value):
     conditioned_samples = [s for s in samples if s[condition_node] == condition_value]
     if not conditioned_samples:
         return 0.0
