@@ -282,30 +282,40 @@ if st.button('Vorhersage starten'):
             profile_df_long = pd.DataFrame([(key, sub_key, value) for key, sub_dict in profile_data_named.items() for sub_key, value in sub_dict.items()],
                                           columns=['Faktor', 'Zustand', 'Wahrscheinlichkeit'])
 
-            # Kreisdiagramme nebeneinander
-            base = alt.Chart(profile_df_long).encode(
-                theta=alt.Theta("Wahrscheinlichkeit:Q", stack=True),
-                color=alt.Color("Zustand:N", legend=alt.Legend(title="Zustand"))
-            )
+            # Kreisdiagramme untereinander mit Beschreibungen darüber
+            factor_charts = []
+            for factor in profile_df_long['Faktor'].unique():
+                factor_data = profile_df_long[profile_df_long['Faktor'] == factor]
 
-            pie = base.mark_arc(outerRadius=60).encode(
-                order=alt.Order("Wahrscheinlichkeit:Q", sort="descending"),
-                tooltip=["Faktor", "Zustand", alt.Tooltip("Wahrscheinlichkeit", format=".1%")]
-            )
+                base = alt.Chart(factor_data).encode(
+                    theta=alt.Theta("Wahrscheinlichkeit:Q", stack=True),
+                    color=alt.Color("Zustand:N", legend=None) # Legende innerhalb der einzelnen Charts ist redundant
+                )
 
-            text = base.mark_text(radius=80).encode(
-                text=alt.Text("Wahrscheinlichkeit:Q", format=".1%"),
-                order=alt.Order("Wahrscheinlichkeit:Q", sort="descending"),
-                color=alt.value("darkgray")  # Dunkelgrau als Schriftfarbe
-            )
+                pie = base.mark_arc(outerRadius=60).encode(
+                    order=alt.Order("Wahrscheinlichkeit:Q", sort="descending"),
+                    tooltip=["Zustand", alt.Tooltip("Wahrscheinlichkeit", format=".1%")]
+                )
 
-            final_profile_chart = (pie + text).facet(
-                column=alt.Column('Faktor:N', header=alt.Header(titleOrient='bottom', labelOrient='bottom'))
-            ).properties(
+                text = base.mark_text(radius=80).encode(
+                    text=alt.Text("Wahrscheinlichkeit:Q", format=".1%"),
+                    order=alt.Order("Wahrscheinlichkeit:Q", sort="descending"),
+                    color=alt.value("darkgray")
+                )
+
+                factor_chart = (pie + text).properties(
+                    title=factor
+                )
+                factor_charts.append(factor_chart)
+
+            # Kombiniere die Charts vertikal
+            combined_chart = alt.vconcat(*factor_charts).properties(
                 title='Psychologisches Profil'
+            ).resolve_scale(
+                theta='shared' # Stelle sicher, dass die Winkel konsistent sind
             )
 
-            st.altair_chart(final_profile_chart, use_container_width=True)
+            st.altair_chart(combined_chart, use_container_width=True)
 
         else:
             st.warning('Es wurden keine Stichproben generiert.')
