@@ -264,7 +264,7 @@ if st.button('Vorhersage starten'):
                             'Aggressives Verhalten', 'Soziale Isolation', 'Leistungsabfall',
                             'Warnsignale im Gespräch', 'Vorherige Vorfälle', 'Gefahrenpotenzial']
             color_range = ['#a6cee3', '#1f78b4', '#b2df8a', '#33a02c', '#fb9a99',
-                           '#e31a1c', '#fdbf6f', '#ff7f00', '#cab2d6'] # Etwas sanftere Farben
+                           '#e31a1c', '#fdbf6f', '#ff7f00', '#cab2d6']
             color_scale = alt.Scale(domain=color_domain, range=color_range)
 
             profile_data_named = {
@@ -282,30 +282,18 @@ if st.button('Vorhersage starten'):
             profile_df_long = pd.DataFrame([(key, sub_key, value) for key, sub_dict in profile_data_named.items() for sub_key, value in sub_dict.items()],
                                           columns=['Faktor', 'Zustand', 'Wahrscheinlichkeit'])
 
-            # Verbesserte Visualisierung des psychologischen Profils
-            profile_chart = alt.Chart(profile_df_long).mark_point(size=100, opacity=0.8).encode(
-                x=alt.X('Faktor:N', axis=None), # Keine x-Achsen-Beschriftung, da wir Text verwenden
-                y=alt.Y('Wahrscheinlichkeit:Q', axis=alt.Axis(format='%')),
-                color=alt.Color('Faktor:N', scale=color_scale),
-                shape='Zustand:N',
-                size=alt.Size('Wahrscheinlichkeit:Q', legend=None, scale=alt.Scale(range=[50, 300])), # Größe basierend auf Wahrscheinlichkeit
-                tooltip=['Faktor', 'Zustand', alt.Tooltip('Wahrscheinlichkeit', format='.2%')]
+            profile_chart = alt.Chart(profile_df_long).mark_bar().encode(
+                x=alt.X('Wahrscheinlichkeit:Q', axis=alt.Axis(format='%')),
+                y=alt.Y('Zustand:N', sort='-x', title='Zustand'),
+                color=alt.Color('Faktor:N', scale=color_scale, legend=None), # Farbe nach Faktor, Legende ausgeblendet
+                facet=alt.Facet('Faktor:N', header=alt.Header(titleOrient="bottom", labelOrient="bottom"))
             ).properties(
                 title='Psychologisches Profil'
-            )
-
-            text = profile_chart.mark_text(align='left', dx=5).encode(
-                text=alt.Text('Zustand'),
-                color=alt.value('black') # Textfarbe
-            )
-
-            final_profile_chart = (profile_chart + text).facet(
-                row=alt.Row('Faktor:N', header=alt.Header(titleOrient='bottom', labelOrient='bottom'))
             ).resolve_scale(
                 y='independent'
             )
 
-            st.altair_chart(final_profile_chart, use_container_width=True)
+            st.altair_chart(profile_chart, use_container_width=True)
 
         else:
             st.warning('Es wurden keine Stichproben generiert.')
