@@ -268,7 +268,7 @@ if st.button('Vorhersage starten'):
             color_scale = alt.Scale(domain=color_domain, range=color_range)
 
             profile_data_named = {
-                'Familiäres Umfeld': calculate_node_probabilities_named(sampled_data, 'familiaeres_uUmfeld', {'stabil': 'Stabiles Umfeld', 'instabil': 'Instabiles Umfeld'}),
+                'Familiäres Umfeld': calculate_node_probabilities_named(sampled_data, 'familiaeres_uUmfeld', {'stabil': 'Stabiles Umfeld', 'instabiles Umfeld': 'Instabiles Umfeld'}),
                 'Psychische Gesundheit': calculate_node_probabilities_named(sampled_data, 'psychische_gesundheit', {'unauffällig': 'Unauffällig', 'auffällig': 'Auffällig'}),
                 'Schulische Unterstützung': calculate_node_probabilities_named(sampled_data, 'schulische_unterstuetzung', {'vorhanden': 'Vorhanden', 'mangelhaft': 'Mangelhaft'}),
                 'Aggressives Verhalten': calculate_node_probabilities_named(sampled_data, 'aggressives_verhalten', {'aggressivja': 'Ja', 'aggressivnein': 'Nein'}),
@@ -282,18 +282,30 @@ if st.button('Vorhersage starten'):
             profile_df_long = pd.DataFrame([(key, sub_key, value) for key, sub_dict in profile_data_named.items() for sub_key, value in sub_dict.items()],
                                           columns=['Faktor', 'Zustand', 'Wahrscheinlichkeit'])
 
-            profile_chart = alt.Chart(profile_df_long).mark_bar().encode(
-                x=alt.X('Wahrscheinlichkeit:Q', axis=alt.Axis(format='%')),
-                y=alt.Y('Zustand:N', sort='-x', title='Zustand'),
-                color=alt.Color('Faktor:N', scale=color_scale, legend=None), # Farbe nach Faktor, Legende ausgeblendet
-                facet=alt.Facet('Faktor:N', header=alt.Header(titleOrient="bottom", labelOrient="bottom"))
-            ).properties(
-                title='Psychologisches Profil'
-            ).resolve_scale(
-                y='independent'
+            # Kreisdiagramme (Pie Charts)
+            base = alt.Chart(profile_df_long).encode(
+                theta=alt.Theta("Wahrscheinlichkeit:Q", stack=True)
             )
 
-            st.altair_chart(profile_chart, use_container_width=True)
+            pie = base.mark_arc(outerRadius=60).encode(
+                color=alt.Color("Zustand:N", legend=alt.Legend(title="Zustand")),
+                order=alt.Order("Wahrscheinlichkeit:Q", sort="descending"),
+                tooltip=["Faktor", "Zustand", alt.Tooltip("Wahrscheinlichkeit", format=".1%")]
+            )
+
+            text = base.mark_text(radius=80).encode(
+                text=alt.Text("Wahrscheinlichkeit:Q", format=".1%"),
+                order=alt.Order("Wahrscheinlichkeit:Q", sort="descending"),
+                color=alt.value("black")  # Textfarbe
+            )
+
+            final_profile_chart = (pie + text).facet(
+                row=alt.Row('Faktor:N', header=alt.Header(titleOrient='bottom', labelOrient='bottom'))
+            ).properties(
+                title='Psychologisches Profil'
+            )
+
+            st.altair_chart(final_profile_chart, use_container_width=True)
 
         else:
             st.warning('Es wurden keine Stichproben generiert.')
