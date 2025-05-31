@@ -268,7 +268,7 @@ if st.button('Vorhersage starten'):
             color_scale = alt.Scale(domain=color_domain, range=color_range)
 
             profile_data_named = {
-                'Familiäres Umfeld': calculate_node_probabilities_named(sampled_data, 'familiaeres_uUmfeld', {'stabil': 'Stabiles Umfeld', 'instabiles Umfeld': 'Instabiles Umfeld'}),
+                'Familiäres Umfeld': calculate_node_probabilities_named(sampled_data, 'familiaeres_uUmfeld', {'stabil': 'Stabiles Umfeld', 'instabil': 'Instabiles Umfeld'}),
                 'Psychische Gesundheit': calculate_node_probabilities_named(sampled_data, 'psychische_gesundheit', {'unauffällig': 'Unauffällig', 'auffällig': 'Auffällig'}),
                 'Schulische Unterstützung': calculate_node_probabilities_named(sampled_data, 'schulische_unterstuetzung', {'vorhanden': 'Vorhanden', 'mangelhaft': 'Mangelhaft'}),
                 'Aggressives Verhalten': calculate_node_probabilities_named(sampled_data, 'aggressives_verhalten', {'aggressivja': 'Ja', 'aggressivnein': 'Nein'}),
@@ -282,9 +282,10 @@ if st.button('Vorhersage starten'):
             profile_df_long = pd.DataFrame([(key, sub_key, value) for key, sub_dict in profile_data_named.items() for sub_key, value in sub_dict.items()],
                                           columns=['Faktor', 'Zustand', 'Wahrscheinlichkeit'])
 
-            # Kreisdiagramme in flexibler horizontaler Anordnung
+            # Kreisdiagramme in flexibler horizontaler Anordnung (hoffentlich korrekt!)
             factor_charts = []
-            for factor in profile_df_long['Faktor'].unique():
+            unique_factors = profile_df_long['Faktor'].unique()
+            for factor in unique_factors:
                 factor_data = profile_df_long[profile_df_long['Faktor'] == factor]
 
                 base = alt.Chart(factor_data).encode(
