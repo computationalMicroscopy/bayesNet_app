@@ -221,6 +221,7 @@ if st.button('Vorhersage starten'):
                 # Berechne die bedingten Wahrscheinlichkeiten für hohes Gefahrenpotenzial
                 # Berechne die bedingten Wahrscheinlichkeiten für hohes Gefahrenpotenzial
             # Berechne die bedingten Wahrscheinlichkeiten für hohes Gefahrenpotenzial
+            # Berechne die bedingten Wahrscheinlichkeiten für hohes Gefahrenpotenzial
             conditional_probs = {}
             node_name_map = {
                 'familiaeres_uUmfeld': 'Familiäres Umfeld',
@@ -236,11 +237,11 @@ if st.button('Vorhersage starten'):
                 'stabil': 'stabil', 'instabil': 'instabil',
                 'unauffällig': 'unauffällig', 'auffällig': 'auffällig',
                 'vorhanden': 'vorhanden', 'mangelhaft': 'mangelhaft',
-                'aggressivja': 'ja', 'aggressivnein': 'nein',
-                'sozialisoliertja': 'ja', 'sozialisoliertnein': 'nein',
-                'leistungsabfallja': 'ja', 'leistungsabfallnein': 'nein',
-                'warnsignaleja': 'ja', 'warnsignalenein': 'nein',
-                'vorherigefaelleja': 'ja', 'vorherigefaellenein': 'nein'
+                'aggressivja': '', 'aggressivnein': 'nein', # "ja" entfernt
+                'sozialisoliertja': '', 'sozialisoliertnein': 'nein', # "ja" entfernt
+                'leistungsabfallja': '', 'leistungsabfallnein': 'nein', # "ja" entfernt
+                'warnsignaleja': '', 'warnsignalenein': 'nein', # "ja" entfernt
+                'vorherigefaelleja': '', 'vorherigefaellenein': 'nein' # "ja" entfernt
             }
 
             for node in ['familiaeres_uUmfeld', 'psychische_gesundheit', 'schulische_unterstuetzung',
@@ -251,7 +252,7 @@ if st.button('Vorhersage starten'):
                     prob = calculate_conditional_probability(sampled_data, node, internal_value)
                     display_node_name = node_name_map.get(node, node.replace('_', ' ').capitalize())
                     display_value_name = value_name_map.get(internal_value, internal_value.replace('_', ' ').capitalize())
-                    conditional_probs[f"{display_node_name} {display_value_name}"] = prob # "(ja)" und "ist" entfernt
+                    conditional_probs[f"{display_node_name} {display_value_name}"] = prob # "ja" entfernt
 
             conditional_df = pd.DataFrame(list(conditional_probs.items()), columns=['Bedingung', 'Wahrscheinlichkeit'])
             conditional_df_sorted = conditional_df.sort_values(by='Wahrscheinlichkeit', ascending=False).reset_index(drop=True).head(5)
