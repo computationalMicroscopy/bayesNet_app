@@ -283,6 +283,7 @@ if st.button('Vorhersage starten'):
                                           columns=['Faktor', 'Zustand', 'Wahrscheinlichkeit'])
 
             # Kreisdiagramme in flexibler horizontaler Anordnung
+            # Kreisdiagramme in flexibler horizontaler Anordnung
             factor_charts = []
             for factor in profile_df_long['Faktor'].unique():
                 factor_data = profile_df_long[profile_df_long['Faktor'] == factor]
@@ -308,16 +309,15 @@ if st.button('Vorhersage starten'):
                 )
                 factor_charts.append(factor_chart)
 
-            # Anordnung in Zeilen mit 3 oder 4 Diagrammen
+            # Anordnung in Zeilen mit maximal 4 Diagrammen
             rows = [factor_charts[i:i + 4] for i in range(0, len(factor_charts), 4)]
-            combined_chart = alt.vconcat(*[alt.hconcat(*row) for row in rows]).properties(
+            row_charts = [alt.hconcat(*row) for row in rows]
+
+            # Vertikale Verkettung der Zeilen
+            combined_chart = alt.vconcat(*row_charts).properties(
                 title='Psychologisches Profil'
             ).resolve_scale(
                 theta='shared'
             )
 
             st.altair_chart(combined_chart, use_container_width=True)
-
-        else:
-            st.warning('Es wurden keine Stichproben generiert.')
-            profile_data_named = {}
