@@ -261,7 +261,7 @@ if st.button('Vorhersage starten'):
                 return {display_name: count / total if total > 0 else 0 for display_name, count in counts.items()}
 
             profile_data_named = {
-                'Familiäres Umfeld': calculate_node_probabilities_named(sampled_data, 'familiaeres_uUmfeld', {'stabil': 'Stabiles Umfeld', 'instabiles Umfeld': 'Instabiles Umfeld'}),
+                'Familiäres Umfeld': calculate_node_probabilities_named(sampled_data, 'familiaeres_uUmfeld', {'stabil': 'Stabiles Umfeld', 'instabil': 'Instabiles Umfeld'}),
                 'Psychische Gesundheit': calculate_node_probabilities_named(sampled_data, 'psychische_gesundheit', {'unauffällig': 'Unauffällig', 'auffällig': 'Auffällig'}),
                 'Schulische Unterstützung': calculate_node_probabilities_named(sampled_data, 'schulische_unterstuetzung', {'vorhanden': 'Vorhanden', 'mangelhaft': 'Mangelhaft'}),
                 'Aggressives Verhalten': calculate_node_probabilities_named(sampled_data, 'aggressives_verhalten', {'aggressivja': 'Ja', 'aggressivnein': 'Nein'}),
@@ -273,17 +273,23 @@ if st.button('Vorhersage starten'):
             }
 
             st.subheader('Psychologisches Profil:')
-            cols = st.columns(3) # Anordnung in 3 Spalten
+            cols = st.columns(3)
+            factor_colors = ['#1f77b4', '#ff7f0e', '#2ca02c', '#d62728', '#9467bd', '#8c564b', '#e377c2', '#7f7f7f', '#bcbd22'] # Eine Liste von Farben
 
             factor_index = 0
             for faktor, wahrscheinlichkeiten in profile_data_named.items():
                 with cols[factor_index % 3]:
-                    st.markdown(f"**{faktor}**")
-                    for zustand, wahrscheinlichkeit in wahrscheinlichkeiten.items():
-                        bar_length = int(wahrscheinlichkeit * 50) # Länge des simulierten Balkens
-                        bar = f'<div style="background-color: #4CAF50; height: 10px; width: {bar_length}px; margin-bottom: 5px;"></div>'
-                        st.markdown(f"{zustand}: {wahrscheinlichkeit:.1%}")
+                    factor_color = factor_colors[factor_index % len(factor_colors)]
+                    st.markdown(f'<div style="border: 1px solid {factor_color}; padding: 10px; border-radius: 5px;">', unsafe_allow_html=True)
+                    st.markdown(f"<h5 style='color: {factor_color};'>{faktor}</h5>", unsafe_allow_html=True)
+                    for i, (zustand, wahrscheinlichkeit) in enumerate(wahrscheinlichkeiten.items()):
+                        bar_length = int(wahrscheinlichkeit * 80)
+                        # Leichtere Farbvariante für die Balken
+                        bar_color = f'rgba({int(int(factor_color[1:3], 16) * 1.2)}, {int(int(factor_color[3:5], 16) * 1.2)}, {int(int(factor_color[5:7], 16) * 1.2)}, 0.8)'
+                        bar = f'<div style="background-color: {bar_color}; height: 12px; width: {bar_length}px; margin-bottom: 5px; border-radius: 3px;"></div>'
+                        st.markdown(f"{zustand}: {wahrscheinlichkeit:.1%}", unsafe_allow_html=True)
                         st.markdown(bar, unsafe_allow_html=True)
+                    st.markdown("</div>", unsafe_allow_html=True)
                     factor_index += 1
 
         else:
