@@ -150,7 +150,7 @@ def calculate_conditional_probability(samples, condition_node, condition_value):
     conditioned_samples = [s for s in samples if s[condition_node] == condition_value]
     if not conditioned_samples:
         return 0.0
-    high_risk_conditioned = [s for s in conditioned_samples if s['gefahrenpotential'] == 'gefahrhoch']
+    high_risk_conditioned = [s for s in samples if s['gefahrenpotential'] == 'gefahrhoch']
     return len(high_risk_conditioned) / len(conditioned_samples)
 
 st.title('Netzwerk zur Gefährdervorhersage')
@@ -282,41 +282,22 @@ if st.button('Vorhersage starten'):
             profile_df_long = pd.DataFrame([(key, sub_key, value) for key, sub_dict in profile_data_named.items() for sub_key, value in sub_dict.items()],
                                           columns=['Faktor', 'Zustand', 'Wahrscheinlichkeit'])
 
-            # Kreisdiagramme in flexibler horizontaler Anordnung mit Beschriftung darüber
-            factor_charts = []
-            unique_factors = profile_df_long['Faktor'].unique()
-            for factor in unique_factors:
-                factor_data = profile_df_long[profile_df_long['Faktor'] == factor]
-
-                base = alt.Chart(factor_data).encode(
-                    theta=alt.Theta("Wahrscheinlichkeit:Q", stack=True),
-                    color=alt.Color("Zustand:N", legend=None)
-                )
-
-                pie = base.mark_arc(outerRadius=60).encode(
-                    order=alt.Order("Wahrscheinlichkeit:Q", sort="descending"),
-                    tooltip=["Zustand", alt.Tooltip("Wahrscheinlichkeit", format=".1%")]
-                )
-
-                text = base.mark_text(radius=80).encode(
-                    text=alt.Text("Wahrscheinlichkeit:Q", format=".1%"),
-                    order=alt.Order("Wahrscheinlichkeit:Q", sort="descending"),
-                    color=alt.value("darkgray")
-                )
-
-                factor_chart = alt.vconcat(
-                    alt.Chart({'values': [{'text': factor}]}).mark_text(align='center', baseline='bottom', dy=-5),
-                    (pie + text).properties(width=150, height=150) # Größe der Kreisdiagramme anpassen
-                )
-                factor_charts.append(factor_chart)
-
-            # Anordnung in Zeilen mit maximal 4 Diagrammen
-            rows = [factor_charts[i:i + 4] for i in range(0, len(factor_charts), 4)]
-            combined_chart = alt.vconcat(*[alt.hconcat(*row).resolve_scale(theta='shared') for row in rows]).properties(
+            # Psychologisches Profil: Horizontale Balken für jeden Zustand
+            profile_chart = alt.Chart(profile_df_long).mark_bar().encode(
+                x=alt.X('Wahrscheinlichkeit:Q', axis=alt.Axis(format='%')),
+                y=alt.Y('Zustand:N', title='Zustand'),
+                color='Faktor:N',
+                facet=alt.Facet('Faktor:N', title=None, header=alt.Header(labelOrient='bottom')),
+                tooltip=['Faktor', 'Zustand', alt.Tooltip('Wahrscheinlichkeit', format='.2%')]
+            ).properties(
                 title='Psychologisches Profil'
+            ).resolve_scale(
+                y='independent'
+            ).configure_facet(
+                spacing=10
             )
 
-            st.altair_chart(combined_chart, use_container_width=True)
+            st.altair_chart(profile_chart, use_container_width=True)
 
         else:
             st.warning('Es wurden keine Stichproben generiert.')
