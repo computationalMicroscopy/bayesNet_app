@@ -191,102 +191,119 @@ if st.button('Vorhersage starten'):
             }
 
             st.subheader('Wahrscheinlichkeiten des Gefahrenpotenzials:')
-            prob_df = pd.DataFrame(list(probabilities.items()), columns=['Gefahrenpotenzial', 'Wahrscheinlichkeit'])
-            chart_gefahr = alt.Chart(prob_df).mark_bar().encode(
-                x=alt.X('Wahrscheinlichkeit:Q', axis=alt.Axis(format='%')),
-                y=alt.Y('Gefahrenpotenzial:N', sort='-x', title='Gefahrenpotenzial'),
-                tooltip=['Gefahrenpotenzial', alt.Tooltip('Wahrscheinlichkeit', format='.2%')]
-            ).properties(
-                title='Verteilung des Gefahrenpotenzials'
-            )
-            st.altair_chart(chart_gefahr, use_container_width=True)
+            gefahr_counts = {'gefahrniedrig': 0, 'gefahrmittel': 0, 'gefahrhoch': 0}
+            for s in sampled_data:
+                if 'gefahrenpotential' in s:
+                    gefahr_counts[s['gefahrenpotential']] += 1
 
-            # Berechne die bedingten Wahrscheinlichkeiten für hohes Gefahrenpotenzial
-            conditional_probs = {}
-            node_name_map = {
-                'familiaeres_uUmfeld': 'Familiäres Umfeld',
-                'psychische_gesundheit': 'Psychische Gesundheit',
-                'schulische_unterstuetzung': 'Schulische Unterstützung',
-                'aggressives_verhalten': 'Aggressives Verhalten',
-                'soziale_isolation': 'Soziale Isolation',
-                'leistungsabfall': 'Leistungsabfall',
-                'warnsignale_im_gespraech': 'Warnsignale im Gespräch',
-                'vorherige_vorfaelle': 'Vorherige Vorfälle'
-            }
-            value_name_map = {
-                'stabil': 'stabil', 'instabil': 'instabil',
-                'unauffällig': 'unauffällig', 'auffällig': 'auffällig',
-                'vorhanden': 'vorhanden', 'mangelhaft': 'mangelhaft',
-                'aggressivja': 'ja', 'aggressivnein': 'nein',
-                'sozialisoliertja': 'ja', 'sozialisoliertnein': 'nein',
-                'leistungsabfallja': 'ja', 'leistungsabfallnein': 'nein',
-                'warnsignaleja': 'ja', 'warnsignalenein': 'nein',
-                'vorherigefaelleja': 'ja', 'vorherigefaellenein': 'nein'
-            }
+            total_samples = len(sampled_data)
+            if total_samples > 0:
+                probabilities = {
+                    'Niedrig': gefahr_counts['gefahrniedrig'] / total_samples,
+                    'Mittel': gefahr_counts['gefahrmittel'] / total_samples,
+                    'Hoch': gefahr_counts['gefahrhoch'] / total_samples
+                }
 
-            for node in ['familiaeres_uUmfeld', 'psychische_gesundheit', 'schulische_unterstuetzung',
-                         'aggressives_verhalten', 'soziale_isolation', 'leistungsabfall',
-                         'warnsignale_im_gespraech', 'vorherige_vorfaelle']:
-                unique_internal_values = sorted(list(set(s[node] for s in sampled_data if node in s)))
-                for internal_value in unique_internal_values:
-                    prob = calculate_conditional_probability(sampled_data, node, internal_value)
-                    display_node_name = node_name_map.get(node, node.replace('_', ' ').capitalize())
-                    display_value_name = value_name_map.get(internal_value, internal_value.replace('_', ' ').capitalize())
-                    conditional_probs[f"Hohes Gefahrenpotenzial | {display_node_name} ist {display_value_name}"] = prob
+                prob_df = pd.DataFrame(list(probabilities.items()), columns=['Gefahrenpotenzial', 'Wahrscheinlichkeit'])
+                color_scale_gefahr = alt.Scale(domain=['Niedrig', 'Mittel', 'Hoch'],
+                                               range=['green', 'orange', 'red']) # Farben für die Gefahrenstufen
 
-            conditional_df = pd.DataFrame(list(conditional_probs.items()), columns=['Bedingung', 'Wahrscheinlichkeit'])
-            conditional_df_sorted = conditional_df.sort_values(by='Wahrscheinlichkeit', ascending=False).reset_index(drop=True).head(5)
+                chart_gefahr = alt.Chart(prob_df).mark_bar().encode(
+                    x=alt.X('Wahrscheinlichkeit:Q', axis=alt.Axis(format='%')),
+                    y=alt.Y('Gefahrenpotenzial:N', sort='-x', title='Gefahrenpotenzial'),
+                    color=alt.Color('Gefahrenpotenzial:N', scale=color_scale_gefahr), # Verwende die definierte Farbskala
+                    tooltip=['Gefahrenpotenzial', alt.Tooltip('Wahrscheinlichkeit', format='.2%')]
+                ).properties(
+                    title='Verteilung des Gefahrenpotenzials'
+                )
+                st.altair_chart(chart_gefahr, use_container_width=True)
 
-            st.subheader('Top 5: Bedingungen mit der höchsten Wahrscheinlichkeit für hohes Gefahrenpotenzial:')
+                # Berechne die bedingten Wahrscheinlichkeiten für hohes Gefahrenpotenzial
+                conditional_probs = {}
+                node_name_map = {
+                    'familiaeres_uUmfeld': 'Familiäres Umfeld',
+                    'psychische_gesundheit': 'Psychische Gesundheit',
+                    'schulische_unterstuetzung': 'Schulische Unterstützung',
+                    'aggressives_verhalten': 'Aggressives Verhalten',
+                    'soziale_isolation': 'Soziale Isolation',
+                    'leistungsabfall': 'Leistungsabfall',
+                    'warnsignale_im_gespraech': 'Warnsignale im Gespräch',
+                    'vorherige_vorfaelle': 'Vorherige Vorfälle'
+                }
+                value_name_map = {
+                    'stabil': 'stabil', 'instabil': 'instabil',
+                    'unauffällig': 'unauffällig', 'auffällig': 'auffällig',
+                    'vorhanden': 'vorhanden', 'mangelhaft': 'mangelhaft',
+                    'aggressivja': 'ja', 'aggressivnein': 'nein',
+                    'sozialisoliertja': 'ja', 'sozialisoliertnein': 'nein',
+                    'leistungsabfallja': 'ja', 'leistungsabfallnein': 'nein',
+                    'warnsignaleja': 'ja', 'warnsignalenein': 'nein',
+                    'vorherigefaelleja': 'ja', 'vorherigefaellenein': 'nein'
+                }
 
-            def highlight_max(s):
-                is_max = s == s.max()
-                return ['background-color: yellow' if v else '' for v in is_max]
+                for node in ['familiaeres_uUmfeld', 'psychische_gesundheit', 'schulische_unterstuetzung',
+                             'aggressives_verhalten', 'soziale_isolation', 'leistungsabfall',
+                             'warnsignale_im_gespraech', 'vorherige_vorfaelle']:
+                    unique_internal_values = sorted(list(set(s[node] for s in sampled_data if node in s)))
+                    for internal_value in unique_internal_values:
+                        prob = calculate_conditional_probability(sampled_data, node, internal_value)
+                        display_node_name = node_name_map.get(node, node.replace('_', ' ').capitalize())
+                        display_value_name = value_name_map.get(internal_value, internal_value.replace('_', ' ').capitalize())
+                        conditional_probs[f"Hohes Gefahrenpotenzial | {display_node_name} ist {display_value_name}"] = prob
 
-            st.dataframe(conditional_df_sorted.style.apply(highlight_max, subset=['Wahrscheinlichkeit']).format({'Wahrscheinlichkeit': '{:.2f}'}))
+                conditional_df = pd.DataFrame(list(conditional_probs.items()), columns=['Bedingung', 'Wahrscheinlichkeit'])
+                conditional_df_sorted = conditional_df.sort_values(by='Wahrscheinlichkeit', ascending=False).reset_index(drop=True).head(5)
 
-            st.subheader('Psychologisches Profil:')
-            profile_data_named = {}
+                st.subheader('Top 5: Bedingungen mit der höchsten Wahrscheinlichkeit für hohes Gefahrenpotenzial:')
 
-            def calculate_node_probabilities_named(samples, node_name, value_map_reverse):
-                counts = {display_name: 0 for display_name in value_map_reverse.values()}
-                for sample in samples:
-                    if node_name in sample:
-                        internal_value = sample[node_name]
-                        for internal, display in value_map_reverse.items():
-                            if internal_value == internal:
-                                counts[display] += 1
-                                break
-                total = len(samples)
-                return {display_name: count / total if total > 0 else 0 for display_name, count in counts.items()}
+                def highlight_max(s):
+                    is_max = s == s.max()
+                    return ['background-color: yellow' if v else '' for v in is_max]
 
-            profile_data_named = {
-                'Aggressives Verhalten': calculate_node_probabilities_named(sampled_data, 'aggressives_verhalten', {'aggressivja': 'Ja', 'aggressivnein': 'Nein'}),
-                'Soziale Isolation': calculate_node_probabilities_named(sampled_data, 'soziale_isolation', {'sozialisoliertja': 'Ja', 'sozialisoliertnein': 'Nein'}),
-                'Leistungsabfall': calculate_node_probabilities_named(sampled_data, 'leistungsabfall', {'leistungsabfallja': 'Ja', 'leistungsabfallnein': 'Nein'}),
-                'Warnsignale im Gespräch': calculate_node_probabilities_named(sampled_data, 'warnsignale_im_gespraech', {'warnsignaleja': 'Ja', 'warnsignalenein': 'Nein'}),
-                'Vorherige Vorfälle': calculate_node_probabilities_named(sampled_data, 'vorherige_vorfaelle', {'vorherigefaelleja': 'Ja', 'vorherigefaellenein': 'Nein'}),
-                'Gefahrenpotenzial': probabilities
-            }
+                st.dataframe(conditional_df_sorted.style.apply(highlight_max, subset=['Wahrscheinlichkeit']).format({'Wahrscheinlichkeit': '{:.2f}'}))
 
-            cols = st.columns(3)
-            factor_colors = ['#ff7f0e', '#2ca02c', '#d62728', '#9467bd', '#8c564b', '#e377c2', '#7f7f7f', '#bcbd22', '#17becf']
+                st.subheader('Psychologisches Profil:')
+                profile_data_named = {}
 
-            factor_index = 0
-            for faktor, wahrscheinlichkeiten in profile_data_named.items():
-                with cols[factor_index % 3]:
-                    factor_color = factor_colors[factor_index % len(factor_colors)]
-                    st.markdown(f'<div style="border: 1px solid {factor_color}; padding: 10px; border-radius: 5px;">', unsafe_allow_html=True)
-                    st.markdown(f"<h5 style='color: {factor_color};'>{faktor}</h5>", unsafe_allow_html=True)
-                    for i, (zustand, wahrscheinlichkeit) in enumerate(wahrscheinlichkeiten.items()):
-                        bar_length = int(wahrscheinlichkeit * 80)
-                        bar_color = f'rgba({int(int(factor_color[1:3], 16) * 1.2)}, {int(int(factor_color[3:5], 16) * 1.2)}, {int(int(factor_color[5:7], 16) * 1.2)}, 0.8)'
-                        bar = f'<div style="background-color: {bar_color}; height: 12px; width: {bar_length}px; margin-bottom: 5px; border-radius: 3px;"></div>'
-                        st.markdown(f"{zustand}: {wahrscheinlichkeit:.1%}", unsafe_allow_html=True)
-                        st.markdown(bar, unsafe_allow_html=True)
-                    st.markdown("</div>", unsafe_allow_html=True)
-                    factor_index += 1
+                def calculate_node_probabilities_named(samples, node_name, value_map_reverse):
+                    counts = {display_name: 0 for display_name in value_map_reverse.values()}
+                    for sample in samples:
+                        if node_name in sample:
+                            internal_value = sample[node_name]
+                            for internal, display in value_map_reverse.items():
+                                if internal_value == internal:
+                                    counts[display] += 1
+                                    break
+                    total = len(samples)
+                    return {display_name: count / total if total > 0 else 0 for display_name, count in counts.items()}
 
-        else:
-            st.warning('Es wurden keine Stichproben generiert.')
-            profile_data_named = {}
+                profile_data_named = {
+                    'Aggressives Verhalten': calculate_node_probabilities_named(sampled_data, 'aggressives_verhalten', {'aggressivja': 'Ja', 'aggressivnein': 'Nein'}),
+                    'Soziale Isolation': calculate_node_probabilities_named(sampled_data, 'soziale_isolation', {'sozialisoliertja': 'Ja', 'sozialisoliertnein': 'Nein'}),
+                    'Leistungsabfall': calculate_node_probabilities_named(sampled_data, 'leistungsabfall', {'leistungsabfallja': 'Ja', 'leistungsabfallnein': 'Nein'}),
+                    'Warnsignale im Gespräch': calculate_node_probabilities_named(sampled_data, 'warnsignale_im_gespraech', {'warnsignaleja': 'Ja', 'warnsignalenein': 'Nein'}),
+                    'Vorherige Vorfälle': calculate_node_probabilities_named(sampled_data, 'vorherige_vorfaelle', {'vorherigefaelleja': 'Ja', 'vorherigefaellenein': 'Nein'}),
+                    'Gefahrenpotenzial': probabilities
+                }
+
+                cols = st.columns(3)
+                factor_colors = ['#ff7f0e', '#2ca02c', '#d62728', '#9467bd', '#8c564b', '#e377c2', '#7f7f7f', '#bcbd22', '#17becf']
+
+                factor_index = 0
+                for faktor, wahrscheinlichkeiten in profile_data_named.items():
+                    with cols[factor_index % 3]:
+                        factor_color = factor_colors[factor_index % len(factor_colors)]
+                        st.markdown(f'<div style="border: 1px solid {factor_color}; padding: 10px; border-radius: 5px;">', unsafe_allow_html=True)
+                        st.markdown(f"<h5 style='color: {factor_color};'>{faktor}</h5>", unsafe_allow_html=True)
+                        for i, (zustand, wahrscheinlichkeit) in enumerate(wahrscheinlichkeiten.items()):
+                            bar_length = int(wahrscheinlichkeit * 80)
+                            bar_color = f'rgba({int(int(factor_color[1:3], 16) * 1.2)}, {int(int(factor_color[3:5], 16) * 1.2)}, {int(int(factor_color[5:7], 16) * 1.2)}, 0.8)'
+                            bar = f'<div style="background-color: {bar_color}; height: 12px; width: {bar_length}px; margin-bottom: 5px; border-radius: 3px;"></div>'
+                            st.markdown(f"{zustand}: {wahrscheinlichkeit:.1%}", unsafe_allow_html=True)
+                            st.markdown(bar, unsafe_allow_html=True)
+                        st.markdown("</div>", unsafe_allow_html=True)
+                        factor_index += 1
+
+            else:
+                st.warning('Es wurden keine Stichproben generiert.')
+                profile_data_named = {}
