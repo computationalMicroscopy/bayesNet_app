@@ -260,13 +260,6 @@ if st.button('Vorhersage starten'):
                 total = len(samples)
                 return {display_name: count / total if total > 0 else 0 for display_name, count in counts.items()}
 
-            color_domain = ['Familiäres Umfeld', 'Psychische Gesundheit', 'Schulische Unterstützung',
-                            'Aggressives Verhalten', 'Soziale Isolation', 'Leistungsabfall',
-                            'Warnsignale im Gespräch', 'Vorherige Vorfälle', 'Gefahrenpotenzial']
-            color_range = ['#a6cee3', '#1f78b4', '#b2df8a', '#33a02c', '#fb9a99',
-                           '#e31a1c', '#fdbf6f', '#ff7f00', '#cab2d6']
-            color_scale = alt.Scale(domain=color_domain, range=color_range)
-
             profile_data_named = {
                 'Familiäres Umfeld': calculate_node_probabilities_named(sampled_data, 'familiaeres_uUmfeld', {'stabil': 'Stabiles Umfeld', 'instabiles Umfeld': 'Instabiles Umfeld'}),
                 'Psychische Gesundheit': calculate_node_probabilities_named(sampled_data, 'psychische_gesundheit', {'unauffällig': 'Unauffällig', 'auffällig': 'Auffällig'}),
@@ -279,22 +272,19 @@ if st.button('Vorhersage starten'):
                 'Gefahrenpotenzial': probabilities
             }
 
-            profile_df_long = pd.DataFrame([(key, sub_key, value) for key, sub_dict in profile_data_named.items() for sub_key, value in sub_dict.items()],
-                                          columns=['Faktor', 'Zustand', 'Wahrscheinlichkeit'])
+            st.subheader('Psychologisches Profil:')
+            cols = st.columns(3) # Anordnung in 3 Spalten
 
-            # Psychologisches Profil: Gestapelte horizontale Balken pro Faktor
-            profile_chart = alt.Chart(profile_df_long).mark_bar().encode(
-                x=alt.X('Wahrscheinlichkeit:Q', axis=alt.Axis(format='%')),
-                y=alt.Y('Faktor:N', title=None, sort=None),
-                color=alt.Color('Zustand:N', title='Zustand'),
-                tooltip=['Faktor', 'Zustand', alt.Tooltip('Wahrscheinlichkeit', format='.2%')]
-            ).properties(
-                title='Psychologisches Profil'
-            ).resolve_scale(
-                x='independent' # Jeder Balken geht von 0 bis 1
-            )
-
-            st.altair_chart(profile_chart, use_container_width=True)
+            factor_index = 0
+            for faktor, wahrscheinlichkeiten in profile_data_named.items():
+                with cols[factor_index % 3]:
+                    st.markdown(f"**{faktor}**")
+                    for zustand, wahrscheinlichkeit in wahrscheinlichkeiten.items():
+                        bar_length = int(wahrscheinlichkeit * 50) # Länge des simulierten Balkens
+                        bar = f'<div style="background-color: #4CAF50; height: 10px; width: {bar_length}px; margin-bottom: 5px;"></div>'
+                        st.markdown(f"{zustand}: {wahrscheinlichkeit:.1%}")
+                        st.markdown(bar, unsafe_allow_html=True)
+                    factor_index += 1
 
         else:
             st.warning('Es wurden keine Stichproben generiert.')
