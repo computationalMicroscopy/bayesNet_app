@@ -260,15 +260,8 @@ if st.button('Vorhersage starten'):
                 total = len(samples)
                 return {display_name: count / total if total > 0 else 0 for display_name, count in counts.items()}
 
-            color_domain = ['Familiäres Umfeld', 'Psychische Gesundheit', 'Schulische Unterstützung',
-                            'Aggressives Verhalten', 'Soziale Isolation', 'Leistungsabfall',
-                            'Warnsignale im Gespräch', 'Vorherige Vorfälle', 'Gefahrenpotenzial']
-            color_range = ['#a6cee3', '#1f78b4', '#b2df8a', '#33a02c', '#fb9a99',
-                           '#e31a1c', '#fdbf6f', '#ff7f00', '#cab2d6']
-            color_scale = alt.Scale(domain=color_domain, range=color_range)
-
             profile_data_named = {
-                'Familiäres Umfeld': calculate_node_probabilities_named(sampled_data, 'familiaeres_uUmfeld', {'stabil': 'Stabiles Umfeld', 'instabiles Umfeld': 'Instabiles Umfeld'}),
+                'Familiäres Umfeld': calculate_node_probabilities_named(sampled_data, 'familiaeres_uUmfeld', {'stabil': 'Stabiles Umfeld', 'instabil': 'Instabiles Umfeld'}),
                 'Psychische Gesundheit': calculate_node_probabilities_named(sampled_data, 'psychische_gesundheit', {'unauffällig': 'Unauffällig', 'auffällig': 'Auffällig'}),
                 'Schulische Unterstützung': calculate_node_probabilities_named(sampled_data, 'schulische_unterstuetzung', {'vorhanden': 'Vorhanden', 'mangelhaft': 'Mangelhaft'}),
                 'Aggressives Verhalten': calculate_node_probabilities_named(sampled_data, 'aggressives_verhalten', {'aggressivja': 'Ja', 'aggressivnein': 'Nein'}),
@@ -282,19 +275,41 @@ if st.button('Vorhersage starten'):
             profile_df_long = pd.DataFrame([(key, sub_key, value) for key, sub_dict in profile_data_named.items() for sub_key, value in sub_dict.items()],
                                           columns=['Faktor', 'Zustand', 'Wahrscheinlichkeit'])
 
-            # Psychologisches Profil: Gestapelte horizontale Balken pro Faktor
-            profile_chart = alt.Chart(profile_df_long).mark_bar().encode(
-                x=alt.X('Wahrscheinlichkeit:Q', axis=alt.Axis(format='%')),
-                y=alt.Y('Faktor:N', title=None, sort=None),
-                color=alt.Color('Zustand:N', title='Zustand'),
+            # Psychologisches Profil: Farbcodierte Tabelle (Heatmap)
+            factors = profile_df_long['Faktor'].unique()
+            states = profile_df_long['Zustand'].unique()
+
+            heatmap_data = []
+            for factor in factors:
+                factor_data = profile_df_long[profile_df_long['Faktor'] == factor]
+                row = {'Faktor': factor}
+                for state in states:
+                    prob = factor_data[factor_data['Zustand'] == state]['Wahrscheinlichkeit'].values
+                    row[state] = prob[0] if len(prob) > 0 else 0
+                heatmap_data.append(row)
+
+            heatmap_df = pd.DataFrame(heatmap_data).set_index('Faktor')
+            heatmap_df_melted = heatmap_df.melt(var_name='Zustand', value_name='Wahrscheinlichkeit', ignore_index=False).reset_index()
+
+            color_scale_heatmap = alt.Scale(range='heatmap') # Verwenden einer Standard-Heatmap-Farbskala
+
+            heatmap_chart = alt.Chart(heatmap_df_melted).mark_rect().encode(
+                x=alt.X('Zustand:N', title='Zustand'),
+                y=alt.Y('Faktor:N', title='Faktor'),
+                color=alt.Color('Wahrscheinlichkeit:Q', scale=color_scale_heatmap),
                 tooltip=['Faktor', 'Zustand', alt.Tooltip('Wahrscheinlichkeit', format='.2%')]
             ).properties(
                 title='Psychologisches Profil'
-            ).resolve_scale(
-                x='independent' # Jeder Balken geht von 0 bis 1
             )
 
-            st.altair_chart(profile_chart, use_container_width=True)
+            text_chart = heatmap_chart.mark_text().encode(
+                text=alt.Text('Wahrscheinlichkeit:Q', format='.1%'),
+                color=alt.value('black') # Schriftfarbe für die Werte
+            )
+
+            final_chart = heatmap_chart + text_chart
+
+            st.altair_chart(final_chart, use_container_width=True)
 
         else:
             st.warning('Es wurden keine Stichproben generiert.')
