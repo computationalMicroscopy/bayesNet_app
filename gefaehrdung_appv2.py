@@ -146,11 +146,11 @@ def forward_sampling(noSamples):
 
     return samplelist
 
-def calculate_conditional_probability(samples, condition_node, condition_value):
+ def calculate_conditional_probability(samples, condition_node, condition_value):
     conditioned_samples = [s for s in samples if s[condition_node] == condition_value]
     if not conditioned_samples:
         return 0.0
-    high_risk_conditioned = [s for s in samples if s['gefahrenpotential'] == 'gefahrhoch']
+    high_risk_conditioned = [s for s in conditioned_samples if s['gefahrenpotential'] == 'gefahrhoch']
     return len(high_risk_conditioned) / len(conditioned_samples)
 
 st.title('Netzwerk zur Gefährdervorhersage')
@@ -282,19 +282,16 @@ if st.button('Vorhersage starten'):
             profile_df_long = pd.DataFrame([(key, sub_key, value) for key, sub_dict in profile_data_named.items() for sub_key, value in sub_dict.items()],
                                           columns=['Faktor', 'Zustand', 'Wahrscheinlichkeit'])
 
-            # Psychologisches Profil: Horizontale Balken für jeden Zustand
+            # Psychologisches Profil: Gestapelte horizontale Balken pro Faktor
             profile_chart = alt.Chart(profile_df_long).mark_bar().encode(
                 x=alt.X('Wahrscheinlichkeit:Q', axis=alt.Axis(format='%')),
-                y=alt.Y('Zustand:N', title='Zustand'),
-                color='Faktor:N',
-                facet=alt.Facet('Faktor:N', title=None, header=alt.Header(labelOrient='bottom')),
+                y=alt.Y('Faktor:N', title=None, sort=None),
+                color=alt.Color('Zustand:N', title='Zustand'),
                 tooltip=['Faktor', 'Zustand', alt.Tooltip('Wahrscheinlichkeit', format='.2%')]
             ).properties(
                 title='Psychologisches Profil'
             ).resolve_scale(
-                y='independent'
-            ).configure_facet(
-                spacing=10
+                x='independent' # Jeder Balken geht von 0 bis 1
             )
 
             st.altair_chart(profile_chart, use_container_width=True)
