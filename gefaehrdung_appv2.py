@@ -269,9 +269,8 @@ if st.button('Vorhersage starten'):
                 'Gefahrenpotenzial': probabilities
             }
 
-            st.subheader('Psychologisches Profil:')
             cols = st.columns(3)
-            factor_colors = ['#ff7f0e', '#2ca02c', '#d62728', '#9467bd', '#8c564b', '#e377c2', '#7f7f7f', '#bcbd22', '#17becf'] # Angepasste Farbliste
+            factor_colors = ['#ff7f0e', '#2ca02c', '#d62728', '#9467bd', '#8c564b', '#e377c2', '#7f7f7f', '#bcbd22', '#17becf']
 
             factor_index = 0
             for faktor, wahrscheinlichkeiten in profile_data_named.items():
